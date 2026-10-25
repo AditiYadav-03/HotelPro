@@ -33,13 +33,25 @@ const RoomList = () => {
     const fetchCategories = async () => {
       try {
         const res = await API.get('/hotel/categories');
-        setCategories(res.data.categories || []);
+        const catList = res.data.categories || [];
+        setCategories(catList);
+
+        // Map URL category name (e.g. 'Deluxe') to actual category _id
+        const paramCat = searchParams.get('category');
+        if (paramCat) {
+          const matched = catList.find(
+            (c) => c._id === paramCat || c.name.toLowerCase() === paramCat.toLowerCase()
+          );
+          if (matched) {
+            setSelectedCategory(matched._id);
+          }
+        }
       } catch (err) {
         console.error(err);
       }
     };
     fetchCategories();
-  }, []);
+  }, [searchParams]);
 
   // Fetch rooms with applied filters
   useEffect(() => {

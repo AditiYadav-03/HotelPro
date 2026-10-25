@@ -1,4 +1,7 @@
+const mongoose = require('mongoose');
 const Room = require('../models/Room');
+const RoomCategory = require('../models/RoomCategory');
+const Hotel = require('../models/Hotel');
 const Booking = require('../models/Booking');
 const AdminLog = require('../models/AdminLog');
 
@@ -10,30 +13,78 @@ const getAllRooms = async (req, res, next) => {
     const { category, minPrice, maxPrice, capacity, status, search, sort } = req.query;
     const query = {};
 
+    // 1. Category Filter (Supports both ObjectId and Category Name string like 'Deluxe')
     if (category) {
-      query.category = category;
+      if (mongoose.Types.ObjectId.isValid(category) && String(new mongoose.Types.ObjectId(category)) === category) {
+        query.category = category;
+      } else {
+        const catDoc = await RoomCategory.findOne({
+          name: { $regex: new RegExp(`^${category}$`, 'i') },
+        });
+        if (catDoc) {
+          query.category = catDoc._id;
+        } else {
+          const partialCat = await RoomCategory.findOne({
+            name: { $regex: category, $options: 'i' },
+          });
+          if (partialCat) {
+            query.category = partialCat._id;
+          }
+        }
+      }
     }
 
+    // 2. Status Filter
     if (status) {
       query.status = status;
     }
 
-    if (capacity) {
+    // 3. Capacity Filter
+    if (capacity && !isNaN(Number(capacity)) && Number(capacity) > 0) {
       query.capacity = { $gte: Number(capacity) };
     }
 
+    // 4. Price Range Filter
     if (minPrice || maxPrice) {
       query.pricePerNight = {};
-      if (minPrice) query.pricePerNight.$gte = Number(minPrice);
-      if (maxPrice) query.pricePerNight.$lte = Number(maxPrice);
+      if (minPrice && !isNaN(Number(minPrice))) query.pricePerNight.$gte = Number(minPrice);
+      if (maxPrice && !isNaN(Number(maxPrice))) query.pricePerNight.$lte = Number(maxPrice);
     }
 
-    if (search) {
-      query.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { roomNumber: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } },
+    // 5. Intelligent Multi-Entity Search (Title, Description, Amenities, Category Names & Hotel/City)
+    if (search && search.trim()) {
+      const term = search.trim();
+
+      // Find any categories or hotels that match this keyword
+      const [matchedCategories, matchedHotels] = await Promise.all([
+        RoomCategory.find({ name: { $regex: term, $options: 'i' } }).select('_id'),
+        Hotel.find({
+          $or: [
+            { name: { $regex: term, $options: 'i' } },
+            { 'address.city': { $regex: term, $options: 'i' } },
+            { 'address.state': { $regex: term, $options: 'i' } },
+          ],
+        }).select('_id'),
+      ]);
+
+      const catIds = matchedCategories.map((c) => c._id);
+      const hotelIds = matchedHotels.map((h) => h._id);
+
+      const searchConditions = [
+        { title: { $regex: term, $options: 'i' } },
+        { roomNumber: { $regex: term, $options: 'i' } },
+        { description: { $regex: term, $options: 'i' } },
+        { amenities: { $regex: term, $options: 'i' } },
       ];
+
+      if (catIds.length > 0) {
+        searchConditions.push({ category: { $in: catIds } });
+      }
+      if (hotelIds.length > 0) {
+        searchConditions.push({ hotel: { $in: hotelIds } });
+      }
+
+      query.$or = searchConditions;
     }
 
     let roomQuery = Room.find(query).populate('category').populate('hotel');

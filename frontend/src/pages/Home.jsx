@@ -19,34 +19,40 @@ import {
 const Home = () => {
   const navigate = useNavigate();
   const [featuredRooms, setFeaturedRooms] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Search widget state
+  const [searchKeyword, setSearchKeyword] = useState('');
   const [checkInDate, setCheckInDate] = useState('');
   const [checkOutDate, setCheckOutDate] = useState('');
   const [guests, setGuests] = useState('2');
   const [selectedCategory, setSelectedCategory] = useState('');
 
   useEffect(() => {
-    const fetchRooms = async () => {
+    const fetchData = async () => {
       try {
-        const res = await API.get('/rooms');
-        const rooms = res.data.rooms || [];
-        setFeaturedRooms(rooms.slice(0, 3));
+        const [roomsRes, catRes] = await Promise.all([
+          API.get('/rooms'),
+          API.get('/hotel/categories').catch(() => ({ data: { categories: [] } })),
+        ]);
+        setFeaturedRooms(roomsRes.data.rooms?.slice(0, 3) || []);
+        setCategories(catRes.data.categories || []);
       } catch (err) {
         console.error(err);
       } finally {
         setLoading(false);
       }
     };
-    fetchRooms();
+    fetchData();
   }, []);
 
   const handleSearch = (e) => {
     e.preventDefault();
     const queryParams = new URLSearchParams();
+    if (searchKeyword.trim()) queryParams.append('search', searchKeyword.trim());
     if (selectedCategory) queryParams.append('category', selectedCategory);
-    if (guests) queryParams.append('capacity', guests);
+    if (guests && guests !== 'any') queryParams.append('capacity', guests);
     navigate(`/rooms?${queryParams.toString()}`);
   };
 
@@ -90,31 +96,49 @@ const Home = () => {
                 </h4>
                 <form onSubmit={handleSearch}>
                   <div className="mb-3">
-                    <label className="form-label small fw-bold text-muted">Check-In Date</label>
-                    <input
-                      type="date"
-                      className="form-control form-control-lg fs-6"
-                      value={checkInDate}
-                      onChange={(e) => setCheckInDate(e.target.value)}
-                    />
+                    <label className="form-label small fw-bold text-muted">Destination or Keyword</label>
+                    <div className="input-group">
+                      <span className="input-group-text bg-light border-end-0">
+                        <Search size={16} className="text-muted" />
+                      </span>
+                      <input
+                        type="text"
+                        className="form-control border-start-0 fs-6"
+                        placeholder="Search hotel, suite, or amenity..."
+                        value={searchKeyword}
+                        onChange={(e) => setSearchKeyword(e.target.value)}
+                      />
+                    </div>
                   </div>
-                  <div className="mb-3">
-                    <label className="form-label small fw-bold text-muted">Check-Out Date</label>
-                    <input
-                      type="date"
-                      className="form-control form-control-lg fs-6"
-                      value={checkOutDate}
-                      onChange={(e) => setCheckOutDate(e.target.value)}
-                    />
+                  <div className="row g-2 mb-3">
+                    <div className="col-6">
+                      <label className="form-label small fw-bold text-muted">Check-In</label>
+                      <input
+                        type="date"
+                        className="form-control fs-6"
+                        value={checkInDate}
+                        onChange={(e) => setCheckInDate(e.target.value)}
+                      />
+                    </div>
+                    <div className="col-6">
+                      <label className="form-label small fw-bold text-muted">Check-Out</label>
+                      <input
+                        type="date"
+                        className="form-control fs-6"
+                        value={checkOutDate}
+                        onChange={(e) => setCheckOutDate(e.target.value)}
+                      />
+                    </div>
                   </div>
                   <div className="row g-2 mb-4">
                     <div className="col-6">
                       <label className="form-label small fw-bold text-muted">Guests</label>
                       <select
-                        className="form-select form-select-lg fs-6"
+                        className="form-select fs-6"
                         value={guests}
                         onChange={(e) => setGuests(e.target.value)}
                       >
+                        <option value="any">Any Capacity</option>
                         <option value="1">1 Guest</option>
                         <option value="2">2 Guests</option>
                         <option value="3">3 Guests</option>
@@ -124,14 +148,16 @@ const Home = () => {
                     <div className="col-6">
                       <label className="form-label small fw-bold text-muted">Room Type</label>
                       <select
-                        className="form-select form-select-lg fs-6"
+                        className="form-select fs-6"
                         value={selectedCategory}
                         onChange={(e) => setSelectedCategory(e.target.value)}
                       >
                         <option value="">All Categories</option>
-                        <option value="Deluxe">Deluxe</option>
-                        <option value="Executive Suite">Executive Suite</option>
-                        <option value="Presidential Suite">Presidential</option>
+                        {categories.map((c) => (
+                          <option key={c._id} value={c._id}>
+                            {c.name}
+                          </option>
+                        ))}
                       </select>
                     </div>
                   </div>
