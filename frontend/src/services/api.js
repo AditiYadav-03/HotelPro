@@ -1,7 +1,13 @@
 import axios from 'axios';
 
+// In production (Vercel), VITE_API_URL must be set in Vercel dashboard to your Render URL.
+// Fallback order: env var → production Render URL → local dev
 const API = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
+  baseURL:
+    import.meta.env.VITE_API_URL ||
+    (import.meta.env.PROD
+      ? 'https://hotelpro-api.onrender.com/api'
+      : 'http://localhost:5000/api'),
 });
 
 // Automatically inject JWT token into authorization header

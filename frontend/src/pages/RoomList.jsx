@@ -30,7 +30,7 @@ const RoomList = () => {
   // Filter States
   const [search, setSearch] = useState(searchParams.get('search') || '');
   const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || '');
-  const [maxPrice, setMaxPrice] = useState(searchParams.get('maxPrice') || '25000');
+  const [maxPrice, setMaxPrice] = useState(searchParams.get('maxPrice') || '100000');
   const [capacity, setCapacity] = useState(searchParams.get('capacity') || '');
   const [status, setStatus] = useState(searchParams.get('status') || '');
   const [sort, setSort] = useState(searchParams.get('sort') || '');
@@ -120,7 +120,7 @@ const RoomList = () => {
   const handleResetFilters = () => {
     setSearch('');
     setSelectedCategory('');
-    setMaxPrice('25000');
+    setMaxPrice('100000');
     setCapacity('');
     setStatus('');
     setSort('');
@@ -129,7 +129,7 @@ const RoomList = () => {
 
   const handleResetFiltersKeepSearch = () => {
     setSelectedCategory('');
-    setMaxPrice('25000');
+    setMaxPrice('100000');
     setCapacity('');
     setStatus('');
   };
@@ -291,7 +291,7 @@ const RoomList = () => {
               <div className="mb-3">
                 <div className="d-flex justify-content-between align-items-center mb-1">
                   <label className="form-label small fw-bold text-muted mb-0">Max Budget</label>
-                  <span className="small fw-bold text-primary">₹{Number(maxPrice).toLocaleString('en-IN')}</span>
+                  <span className="small fw-bold text-primary">₹{Number(maxPrice).toLocaleString('en-IN')}{Number(maxPrice) >= 100000 ? '+' : ''}</span>
                 </div>
                 <input
                   type="range"
