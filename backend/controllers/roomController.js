@@ -51,24 +51,28 @@ const getAllRooms = async (req, res, next) => {
       if (maxPrice && !isNaN(Number(maxPrice))) query.pricePerNight.$lte = Number(maxPrice);
     }
 
+    let matchingHotels = [];
     // 5. Intelligent Multi-Entity Search (Title, Description, Amenities, Category Names & Hotel/City)
     if (search && search.trim()) {
       const term = search.trim();
 
       // Find any categories or hotels that match this keyword
-      const [matchedCategories, matchedHotels] = await Promise.all([
+      const [matchedCategories, matchedHotelDocs] = await Promise.all([
         RoomCategory.find({ name: { $regex: term, $options: 'i' } }).select('_id'),
         Hotel.find({
           $or: [
             { name: { $regex: term, $options: 'i' } },
             { 'address.city': { $regex: term, $options: 'i' } },
             { 'address.state': { $regex: term, $options: 'i' } },
+            { description: { $regex: term, $options: 'i' } },
+            { amenities: { $regex: term, $options: 'i' } },
           ],
-        }).select('_id'),
+        }),
       ]);
 
+      matchingHotels = matchedHotelDocs;
       const catIds = matchedCategories.map((c) => c._id);
-      const hotelIds = matchedHotels.map((h) => h._id);
+      const hotelIds = matchedHotelDocs.map((h) => h._id);
 
       const searchConditions = [
         { title: { $regex: term, $options: 'i' } },
@@ -105,6 +109,7 @@ const getAllRooms = async (req, res, next) => {
       success: true,
       count: rooms.length,
       rooms,
+      hotels: matchingHotels,
     });
   } catch (error) {
     next(error);

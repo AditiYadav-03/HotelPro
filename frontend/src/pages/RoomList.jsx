@@ -15,11 +15,15 @@ import {
   MapPin,
   Building,
   Sparkles,
+  ArrowRight,
+  Phone,
+  Mail,
 } from 'lucide-react';
 
 const RoomList = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [rooms, setRooms] = useState([]);
+  const [matchedHotels, setMatchedHotels] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -102,6 +106,7 @@ const RoomList = () => {
 
         const res = await API.get(`/rooms?${params.toString()}`);
         setRooms(res.data.rooms || []);
+        setMatchedHotels(res.data.hotels || []);
       } catch (err) {
         console.error(err);
       } finally {
@@ -122,6 +127,14 @@ const RoomList = () => {
     setSearchParams({});
   };
 
+  const handleResetFiltersKeepSearch = () => {
+    setSelectedCategory('');
+    setMaxPrice('25000');
+    setCapacity('');
+    setStatus('');
+  };
+
+  // 10 Premier Indian Destinations & Experiences
   const quickPills = [
     { label: 'All Destinations', query: '' },
     { label: '🌴 Goa', query: 'Goa' },
@@ -129,6 +142,11 @@ const RoomList = () => {
     { label: '🏙️ Mumbai', query: 'Mumbai' },
     { label: '❄️ Manali', query: 'Manali' },
     { label: '🏛️ New Delhi', query: 'New Delhi' },
+    { label: '🛶 Udaipur', query: 'Udaipur' },
+    { label: '🌿 Kerala', query: 'Kerala' },
+    { label: '🛕 Varanasi', query: 'Varanasi' },
+    { label: '🌸 Bengaluru', query: 'Bengaluru' },
+    { label: '🌲 Shimla', query: 'Shimla' },
     { label: '🏊 Pool Suites', query: 'Pool' },
     { label: '💆 Spa Retreats', query: 'Spa' },
   ];
@@ -140,7 +158,7 @@ const RoomList = () => {
         <div className="mb-4">
           <h2 className="fw-bold mb-1">Explore Available Rooms & Luxury Suites</h2>
           <p className="text-muted mb-3">
-            Find the perfect accommodation tailored with modern amenities across India's premier destinations.
+            Find the perfect accommodation tailored with modern amenities across 10 premier Indian destinations.
           </p>
 
           {/* Quick Destination & Experience Filter Pills */}
@@ -334,8 +352,78 @@ const RoomList = () => {
             </div>
           </div>
 
-          {/* Room Listings */}
+          {/* Main Content: Matched Hotels & Room Listings */}
           <div className="col-lg-9">
+            {/* 1. MATCHED HOTELS SECTION */}
+            {matchedHotels.length > 0 && (
+              <div className="mb-4">
+                <div className="d-flex align-items-center gap-2 mb-3">
+                  <Building size={20} className="text-primary" />
+                  <h5 className="fw-bold mb-0">
+                    Hotels & Resorts in {search ? `"${search}"` : 'Selected Destination'} ({matchedHotels.length})
+                  </h5>
+                </div>
+                <div className="row g-3">
+                  {matchedHotels.map((hotel) => (
+                    <div key={hotel._id} className="col-12">
+                      <div className="card border-0 shadow-sm rounded-4 overflow-hidden bg-white p-3 hover-shadow transition-all">
+                        <div className="row g-3 align-items-center">
+                          <div className="col-md-4">
+                            <img
+                              src={hotel.images?.[0] || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=600&q=80'}
+                              alt={hotel.name}
+                              className="rounded-3 w-100 object-fit-cover shadow-sm"
+                              style={{ height: '170px' }}
+                            />
+                          </div>
+                          <div className="col-md-8">
+                            <div className="d-flex justify-content-between align-items-start mb-1">
+                              <div>
+                                <span className="badge bg-primary-subtle text-primary mb-1">
+                                  📍 {hotel.address?.city}, {hotel.address?.state}
+                                </span>
+                                <h5 className="fw-bold mb-1 text-dark">{hotel.name}</h5>
+                                <div className="text-muted small mb-2">
+                                  {hotel.address?.street}
+                                </div>
+                              </div>
+                              <div className="badge bg-warning text-dark px-3 py-1 rounded-pill fw-bold">
+                                ★ {hotel.rating} ({hotel.totalReviews || 45}+ reviews)
+                              </div>
+                            </div>
+                            <p className="small text-muted mb-2 line-clamp-2">{hotel.description}</p>
+                            <div className="d-flex flex-wrap gap-1 mb-2">
+                              {hotel.amenities?.slice(0, 5).map((a, i) => (
+                                <span key={i} className="badge bg-light text-secondary border small">
+                                  {a}
+                                </span>
+                              ))}
+                            </div>
+                            <div className="small text-secondary d-flex gap-3">
+                              <span>📞 {hotel.phone}</span>
+                              <span>✉️ {hotel.email}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 2. MATCHED ROOMS & SUITES SECTION */}
+            <div className="d-flex justify-content-between align-items-center mb-3">
+              <h5 className="fw-bold mb-0">
+                Available Rooms & Suites ({rooms.length})
+              </h5>
+              {search && (
+                <span className="badge bg-light text-secondary border px-3 py-1">
+                  Filtering for: "{search}"
+                </span>
+              )}
+            </div>
+
             {loading ? (
               <div className="text-center py-5">
                 <div className="spinner-border text-primary" role="status"></div>
@@ -343,13 +431,23 @@ const RoomList = () => {
               </div>
             ) : rooms.length === 0 ? (
               <div className="card border-0 shadow-sm rounded-4 p-5 text-center bg-white">
-                <h5 className="fw-bold mb-2">No rooms matched your criteria</h5>
+                <h5 className="fw-bold mb-2">No rooms matched your strict filters</h5>
                 <p className="text-muted mb-3">
-                  We couldn't find any rooms matching "{search || 'your active filters'}".
+                  {matchedHotels.length > 0
+                    ? `We found ${matchedHotels.length} resort(s) in this destination, but your active budget (₹${Number(maxPrice).toLocaleString('en-IN')}) or capacity filter filtered out specific rooms.`
+                    : `We couldn't find any rooms matching "${search || 'your active filters'}".`}
                 </p>
-                <div>
-                  <button onClick={handleResetFilters} className="btn btn-primary btn-sm rounded-pill px-4">
-                    Reset & View All Rooms
+                <div className="d-flex justify-content-center gap-2">
+                  {matchedHotels.length > 0 && (
+                    <button
+                      onClick={handleResetFiltersKeepSearch}
+                      className="btn btn-primary btn-sm rounded-pill px-4 fw-semibold"
+                    >
+                      Show All Rooms in {search}
+                    </button>
+                  )}
+                  <button onClick={handleResetFilters} className="btn btn-outline-secondary btn-sm rounded-pill px-4">
+                    Reset All Filters
                   </button>
                 </div>
               </div>
