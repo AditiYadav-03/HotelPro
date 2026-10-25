@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import API from '../services/api';
 import {
@@ -13,7 +13,14 @@ import {
   ArrowRight,
   Clock,
   MapPin,
+  Building,
+  Bed,
   Check,
+  Waves,
+  Utensils,
+  Sun,
+  Briefcase,
+  Mountain,
 } from 'lucide-react';
 
 const Home = () => {
@@ -28,6 +35,11 @@ const Home = () => {
   const [checkOutDate, setCheckOutDate] = useState('');
   const [guests, setGuests] = useState('2');
   const [selectedCategory, setSelectedCategory] = useState('');
+
+  // Live Auto-Complete Suggestions state
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const searchContainerRef = useRef(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -47,8 +59,35 @@ const Home = () => {
     fetchData();
   }, []);
 
+  // Fetch search suggestions with debounce
+  useEffect(() => {
+    const fetchSuggestions = async () => {
+      try {
+        const res = await API.get(`/hotel/suggestions?q=${encodeURIComponent(searchKeyword)}`);
+        setSuggestions(res.data.suggestions || []);
+      } catch (err) {
+        // silently fallback
+      }
+    };
+
+    const timer = setTimeout(fetchSuggestions, 150);
+    return () => clearTimeout(timer);
+  }, [searchKeyword]);
+
+  // Click outside listener for suggestions popup
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const handleSearch = (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
+    setShowSuggestions(false);
     const queryParams = new URLSearchParams();
     if (searchKeyword.trim()) queryParams.append('search', searchKeyword.trim());
     if (selectedCategory) queryParams.append('category', selectedCategory);
@@ -56,13 +95,65 @@ const Home = () => {
     navigate(`/rooms?${queryParams.toString()}`);
   };
 
+  const handleSelectSuggestion = (suggestion) => {
+    setSearchKeyword(suggestion.query);
+    setShowSuggestions(false);
+    navigate(`/rooms?search=${encodeURIComponent(suggestion.query)}`);
+  };
+
+  // 6 Interactive Resort Facilities
+  const resortFacilities = [
+    {
+      title: 'Infinity Sky Pool',
+      desc: 'Temperature-controlled rooftop pool with panoramic skyline & sunset vistas and swim-up bar.',
+      keyword: 'Pool',
+      img: 'https://images.unsplash.com/photo-1576013551627-0cc20b96c2a7?auto=format&fit=crop&w=600&q=80',
+      badge: 'Rooftop Oasis',
+    },
+    {
+      title: 'Wellness Spa & Jacuzzi',
+      desc: 'Holistic rejuvenation therapies, Ayurvedic massages, heated stone baths, and herbal steam sauna.',
+      keyword: 'Spa',
+      img: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=600&q=80',
+      badge: 'Rejuvenation',
+    },
+    {
+      title: 'Michelin Star Dining',
+      desc: 'Curated multi-cuisine culinary experiences with celebrated chefs preparing authentic gourmet menus.',
+      keyword: 'Dining',
+      img: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=600&q=80',
+      badge: 'Fine Dining',
+    },
+    {
+      title: 'Private Beach Access',
+      desc: 'Golden sun-kissed sand, private beachfront cabanas, sunset cocktail lounges, and water sports.',
+      keyword: 'Beach',
+      img: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=600&q=80',
+      badge: 'Coastal Retreat',
+    },
+    {
+      title: 'Executive Business Lounge',
+      desc: 'Ultra-fast gigabit fiber, ergonomic private workstations, meeting suites, and concierge services.',
+      keyword: 'Business',
+      img: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=600&q=80',
+      badge: 'Corporate Elite',
+    },
+    {
+      title: 'Himalayan Alpine Sanctuary',
+      desc: 'Cozy wooden chalets, cedar wood fireplaces, guided snow peak treks, and mountain view decks.',
+      keyword: 'Mountain',
+      img: 'https://images.unsplash.com/photo-1502784444187-359ac186c5bb?auto=format&fit=crop&w=600&q=80',
+      badge: 'Scenic Getaway',
+    },
+  ];
+
   return (
     <div>
       {/* Hero Section */}
       <section
         className="position-relative text-white py-5 d-flex align-items-center"
         style={{
-          minHeight: '85vh',
+          minHeight: '88vh',
           background: `linear-gradient(rgba(15, 23, 42, 0.75), rgba(15, 23, 42, 0.85)), url('https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&w=1920&q=80') center/cover no-repeat`,
         }}
       >
@@ -70,33 +161,40 @@ const Home = () => {
           <div className="row align-items-center g-4">
             <div className="col-lg-7">
               <span className="badge bg-primary text-white px-3 py-2 rounded-pill mb-3 fw-semibold text-uppercase tracking-wider">
-                <Sparkles size={14} className="me-1 inline" /> Luxury Hospitality & Suites
+                <Sparkles size={14} className="me-1 inline" /> Premier Luxury Hospitality & Suites
               </span>
               <h1 className="display-4 fw-bold lh-sm mb-3">
-                Experience Unrivaled Luxury, Comfort & Tranquility.
+                Experience Unrivaled Luxury Across India's Finest Destinations.
               </h1>
               <p className="lead text-light opacity-90 mb-4">
-                Welcome to HotelPro. Indulge in opulent suites, Michelin-grade culinary experiences, and 24/7 dedicated concierge services tailored to perfection.
+                From Goa's beachfront cabanas and Delhi's grand palaces to Jaipur's royal havelis and Manali's alpine peaks, discover handpicked suites crafted for unforgettable stays.
               </p>
               <div className="d-flex flex-wrap gap-3">
                 <Link to="/rooms" className="btn btn-primary btn-lg px-4 rounded-pill fw-semibold shadow">
-                  Explore Rooms & Suites <ArrowRight size={18} className="ms-1 inline" />
+                  Explore All Suites <ArrowRight size={18} className="ms-1 inline" />
                 </Link>
-                <Link to="/login" className="btn btn-outline-light btn-lg px-4 rounded-pill fw-semibold">
-                  Manage Reservations
+                <Link to="/rooms?search=Goa" className="btn btn-outline-light btn-lg px-4 rounded-pill fw-semibold">
+                  🌴 Goa Beachfront
+                </Link>
+                <Link to="/rooms?search=Jaipur" className="btn btn-outline-warning btn-lg px-4 rounded-pill fw-semibold text-white">
+                  👑 Jaipur Palaces
                 </Link>
               </div>
             </div>
 
-            {/* Quick Reservation Search Card */}
+            {/* Quick Reservation Search Card with Interactive Autocomplete */}
             <div className="col-lg-5">
               <div className="card shadow-lg border-0 rounded-4 p-4 text-dark bg-white">
                 <h4 className="fw-bold mb-3 text-primary d-flex align-items-center gap-2">
-                  <Calendar size={22} /> Find Available Rooms
+                  <Calendar size={22} /> Find Available Rooms & Hotels
                 </h4>
+
                 <form onSubmit={handleSearch}>
-                  <div className="mb-3">
-                    <label className="form-label small fw-bold text-muted">Destination or Keyword</label>
+                  {/* Destination / Hotel Search with Live Suggestions */}
+                  <div className="mb-3 position-relative" ref={searchContainerRef}>
+                    <label className="form-label small fw-bold text-muted">
+                      Destination, Hotel or Amenity
+                    </label>
                     <div className="input-group">
                       <span className="input-group-text bg-light border-end-0">
                         <Search size={16} className="text-muted" />
@@ -104,12 +202,68 @@ const Home = () => {
                       <input
                         type="text"
                         className="form-control border-start-0 fs-6"
-                        placeholder="Search hotel, suite, or amenity..."
+                        placeholder="e.g. Goa, Delhi, Jaipur, Pool, Spa..."
                         value={searchKeyword}
-                        onChange={(e) => setSearchKeyword(e.target.value)}
+                        onChange={(e) => {
+                          setSearchKeyword(e.target.value);
+                          setShowSuggestions(true);
+                        }}
+                        onFocus={() => setShowSuggestions(true)}
+                        autoComplete="off"
                       />
+                      {searchKeyword && (
+                        <button
+                          type="button"
+                          className="btn btn-light border border-start-0 text-muted"
+                          onClick={() => setSearchKeyword('')}
+                        >
+                          &times;
+                        </button>
+                      )}
                     </div>
+
+                    {/* Auto-Complete Suggestion Dropdown */}
+                    {showSuggestions && suggestions.length > 0 && (
+                      <div
+                        className="position-absolute start-0 end-0 mt-1 bg-white rounded-3 shadow-lg border overflow-hidden"
+                        style={{ zIndex: 1050, maxHeight: '280px', overflowY: 'auto' }}
+                      >
+                        <div className="p-2 bg-light border-bottom small fw-bold text-muted text-uppercase" style={{ fontSize: '0.7rem' }}>
+                          Suggested Destinations & Hotels
+                        </div>
+                        {suggestions.map((item, idx) => (
+                          <div
+                            key={idx}
+                            className="p-2 px-3 border-bottom d-flex align-items-center justify-content-between hover-bg-light cursor-pointer"
+                            style={{ cursor: 'pointer' }}
+                            onMouseDown={() => handleSelectSuggestion(item)}
+                          >
+                            <div className="d-flex align-items-center gap-2">
+                              {item.type === 'city' ? (
+                                <MapPin size={16} className="text-danger flex-shrink-0" />
+                              ) : item.type === 'hotel' ? (
+                                <Building size={16} className="text-primary flex-shrink-0" />
+                              ) : item.type === 'category' ? (
+                                <Bed size={16} className="text-success flex-shrink-0" />
+                              ) : (
+                                <Sparkles size={16} className="text-warning flex-shrink-0" />
+                              )}
+                              <div>
+                                <div className="fw-semibold text-dark small">{item.title}</div>
+                                <div className="text-muted" style={{ fontSize: '0.72rem' }}>
+                                  {item.subtitle}
+                                </div>
+                              </div>
+                            </div>
+                            <span className="badge bg-light text-secondary border small text-uppercase" style={{ fontSize: '0.65rem' }}>
+                              {item.type}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
+
                   <div className="row g-2 mb-3">
                     <div className="col-6">
                       <label className="form-label small fw-bold text-muted">Check-In</label>
@@ -130,6 +284,7 @@ const Home = () => {
                       />
                     </div>
                   </div>
+
                   <div className="row g-2 mb-4">
                     <div className="col-6">
                       <label className="form-label small fw-bold text-muted">Guests</label>
@@ -161,8 +316,9 @@ const Home = () => {
                       </select>
                     </div>
                   </div>
+
                   <button type="submit" className="btn btn-primary btn-lg w-100 rounded-pill fw-bold shadow">
-                    <Search size={18} className="me-2 inline" /> Check Availability & Rates
+                    <Search size={18} className="me-2 inline" /> Search Available Rooms
                   </button>
                 </form>
               </div>
@@ -215,14 +371,14 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Featured Rooms Section */}
+      {/* Featured Suites Section */}
       <section className="py-5">
         <div className="container">
           <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-end mb-4">
             <div>
               <span className="text-primary fw-bold text-uppercase small tracking-wider">Curated Collections</span>
               <h2 className="fw-bold mb-1">Featured Rooms & Signature Suites</h2>
-              <p className="text-muted mb-0">Handpicked accommodations crafted for luxury, comfort, and serenity.</p>
+              <p className="text-muted mb-0">Handpicked accommodations across premier destinations.</p>
             </div>
             <Link to="/rooms" className="btn btn-outline-primary mt-3 mt-md-0 rounded-pill px-4">
               View All Rooms <ArrowRight size={16} className="ms-1 inline" />
@@ -246,7 +402,7 @@ const Home = () => {
                         className="w-100 h-100 object-fit-cover"
                       />
                       <span className="position-absolute top-0 start-0 m-3 badge bg-dark bg-opacity-75 text-white px-3 py-2 rounded-pill">
-                        Room #{room.roomNumber}
+                        {room.hotel?.address?.city ? `📍 ${room.hotel.address.city}` : `Room #${room.roomNumber}`}
                       </span>
                       {room.discountPercent > 0 && (
                         <span className="position-absolute top-0 end-0 m-3 badge bg-danger px-3 py-2 rounded-pill">
@@ -266,7 +422,10 @@ const Home = () => {
                         </div>
                       </div>
 
-                      <h5 className="card-title fw-bold text-dark mb-2">{room.title}</h5>
+                      <h5 className="card-title fw-bold text-dark mb-1">{room.title}</h5>
+                      <div className="text-muted small mb-2">
+                        {room.hotel?.name || 'HotelPro Luxury'}
+                      </div>
                       <p className="card-text text-muted small line-clamp-2 mb-3">
                         {room.description}
                       </p>
@@ -291,7 +450,7 @@ const Home = () => {
         </div>
       </section>
 
-      {/* World Class Amenities Section */}
+      {/* CLICKABLE 5-STAR FACILITIES SECTION */}
       <section className="py-5 bg-dark text-white">
         <div className="container py-4">
           <div className="text-center max-w-2xl mx-auto mb-5">
@@ -300,34 +459,42 @@ const Home = () => {
             </span>
             <h2 className="fw-bold mb-3">Unparalleled 5-Star Facilities</h2>
             <p className="text-light opacity-75">
-              Everything you need for an unforgettable stay, all under one roof.
+              Click any facility below to browse suites and rooms tailored with these bespoke experiences.
             </p>
           </div>
 
           <div className="row g-4">
-            {[
-              {
-                title: 'Infinity Sky Pool',
-                desc: 'Temperature-controlled rooftop pool with panoramic skyline views and cocktail bar.',
-                img: 'https://images.unsplash.com/photo-1576013551627-0cc20b96c2a7?auto=format&fit=crop&w=600&q=80',
-              },
-              {
-                title: 'Wellness Spa & Jacuzzi',
-                desc: 'Holistic rejuvenation therapies, Swedish massages, herbal steam rooms, and steam sauna.',
-                img: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=600&q=80',
-              },
-              {
-                title: 'Michelin Star Dining',
-                desc: 'Curated dining experiences with celebrated chefs preparing authentic international menus.',
-                img: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=600&q=80',
-              },
-            ].map((facility, idx) => (
-              <div key={idx} className="col-md-4">
-                <div className="card bg-secondary bg-opacity-25 border-0 rounded-4 overflow-hidden h-100 text-white">
-                  <img src={facility.img} alt={facility.title} className="w-100 object-fit-cover" style={{ height: '200px' }} />
-                  <div className="card-body p-4">
-                    <h5 className="fw-bold mb-2">{facility.title}</h5>
-                    <p className="small text-light opacity-75 mb-0">{facility.desc}</p>
+            {resortFacilities.map((facility, idx) => (
+              <div key={idx} className="col-lg-4 col-md-6">
+                <div
+                  className="card bg-secondary bg-opacity-25 border-0 rounded-4 overflow-hidden h-100 text-white cursor-pointer hover-shadow transition-all"
+                  style={{ cursor: 'pointer', border: '1px solid rgba(255,255,255,0.08)' }}
+                  onClick={() => navigate(`/rooms?search=${encodeURIComponent(facility.keyword)}`)}
+                >
+                  <div className="position-relative" style={{ height: '220px' }}>
+                    <img
+                      src={facility.img}
+                      alt={facility.title}
+                      className="w-100 h-100 object-fit-cover"
+                    />
+                    <span className="position-absolute top-0 end-0 m-3 badge bg-primary px-3 py-2 rounded-pill shadow">
+                      {facility.badge}
+                    </span>
+                  </div>
+
+                  <div className="card-body p-4 d-flex flex-column">
+                    <h5 className="fw-bold mb-2 text-white">{facility.title}</h5>
+                    <p className="small text-light opacity-75 mb-3">{facility.desc}</p>
+                    
+                    <div className="mt-auto pt-2">
+                      <Link
+                        to={`/rooms?search=${encodeURIComponent(facility.keyword)}`}
+                        className="btn btn-primary btn-sm rounded-pill w-100 fw-semibold d-flex align-items-center justify-content-center gap-1 shadow-sm"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        Explore Suites with {facility.keyword} <ArrowRight size={15} />
+                      </Link>
+                    </div>
                   </div>
                 </div>
               </div>

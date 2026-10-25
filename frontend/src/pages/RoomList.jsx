@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import API from '../services/api';
 import {
@@ -12,6 +12,9 @@ import {
   CheckCircle,
   Clock,
   RotateCcw,
+  MapPin,
+  Building,
+  Sparkles,
 } from 'lucide-react';
 
 const RoomList = () => {
@@ -23,10 +26,15 @@ const RoomList = () => {
   // Filter States
   const [search, setSearch] = useState(searchParams.get('search') || '');
   const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || '');
-  const [maxPrice, setMaxPrice] = useState(searchParams.get('maxPrice') || '20000');
+  const [maxPrice, setMaxPrice] = useState(searchParams.get('maxPrice') || '25000');
   const [capacity, setCapacity] = useState(searchParams.get('capacity') || '');
   const [status, setStatus] = useState(searchParams.get('status') || '');
   const [sort, setSort] = useState(searchParams.get('sort') || '');
+
+  // Suggestions state
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const searchRef = useRef(null);
 
   // Fetch categories
   useEffect(() => {
@@ -52,6 +60,32 @@ const RoomList = () => {
     };
     fetchCategories();
   }, [searchParams]);
+
+  // Live suggestions
+  useEffect(() => {
+    const fetchSuggestions = async () => {
+      try {
+        const res = await API.get(`/hotel/suggestions?q=${encodeURIComponent(search)}`);
+        setSuggestions(res.data.suggestions || []);
+      } catch (err) {
+        // ignore
+      }
+    };
+
+    const timer = setTimeout(fetchSuggestions, 150);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  // Click outside listener for suggestions
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (searchRef.current && !searchRef.current.contains(e.target)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Fetch rooms with applied filters
   useEffect(() => {
@@ -81,12 +115,23 @@ const RoomList = () => {
   const handleResetFilters = () => {
     setSearch('');
     setSelectedCategory('');
-    setMaxPrice('20000');
+    setMaxPrice('25000');
     setCapacity('');
     setStatus('');
     setSort('');
     setSearchParams({});
   };
+
+  const quickPills = [
+    { label: 'All Destinations', query: '' },
+    { label: '🌴 Goa', query: 'Goa' },
+    { label: '👑 Jaipur', query: 'Jaipur' },
+    { label: '🏙️ Mumbai', query: 'Mumbai' },
+    { label: '❄️ Manali', query: 'Manali' },
+    { label: '🏛️ New Delhi', query: 'New Delhi' },
+    { label: '🏊 Pool Suites', query: 'Pool' },
+    { label: '💆 Spa Retreats', query: 'Spa' },
+  ];
 
   return (
     <div className="bg-light min-vh-100 py-5">
@@ -94,9 +139,35 @@ const RoomList = () => {
         {/* Header Title */}
         <div className="mb-4">
           <h2 className="fw-bold mb-1">Explore Available Rooms & Luxury Suites</h2>
-          <p className="text-muted">
-            Find the perfect accommodation tailored with modern amenities and best rate guarantees.
+          <p className="text-muted mb-3">
+            Find the perfect accommodation tailored with modern amenities across India's premier destinations.
           </p>
+
+          {/* Quick Destination & Experience Filter Pills */}
+          <div className="d-flex flex-wrap gap-2">
+            {quickPills.map((pill, idx) => {
+              const isActive =
+                (!pill.query && !search) ||
+                (pill.query && search.toLowerCase().includes(pill.query.toLowerCase()));
+              return (
+                <button
+                  key={idx}
+                  className={`btn btn-sm rounded-pill px-3 fw-semibold ${
+                    isActive ? 'btn-primary shadow-sm' : 'btn-outline-secondary bg-white'
+                  }`}
+                  onClick={() => {
+                    if (!pill.query) {
+                      handleResetFilters();
+                    } else {
+                      setSearch(pill.query);
+                    }
+                  }}
+                >
+                  {pill.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         <div className="row g-4">
@@ -115,9 +186,9 @@ const RoomList = () => {
                 </button>
               </div>
 
-              {/* Keyword Search */}
-              <div className="mb-3">
-                <label className="form-label small fw-bold text-muted">Keyword Search</label>
+              {/* Keyword Search with Suggestions */}
+              <div className="mb-3 position-relative" ref={searchRef}>
+                <label className="form-label small fw-bold text-muted">Destination / Keyword</label>
                 <div className="input-group">
                   <span className="input-group-text bg-white border-end-0">
                     <Search size={16} className="text-muted" />
@@ -125,11 +196,60 @@ const RoomList = () => {
                   <input
                     type="text"
                     className="form-control border-start-0"
-                    placeholder="Search by title, number..."
+                    placeholder="Search city, hotel, pool..."
                     value={search}
-                    onChange={(e) => setSearch(e.target.value)}
+                    onChange={(e) => {
+                      setSearch(e.target.value);
+                      setShowSuggestions(true);
+                    }}
+                    onFocus={() => setShowSuggestions(true)}
                   />
+                  {search && (
+                    <button
+                      className="btn btn-white border border-start-0 text-muted"
+                      type="button"
+                      onClick={() => setSearch('')}
+                    >
+                      &times;
+                    </button>
+                  )}
                 </div>
+
+                {/* Suggestions Dropdown */}
+                {showSuggestions && suggestions.length > 0 && (
+                  <div
+                    className="position-absolute start-0 end-0 mt-1 bg-white rounded-3 shadow-lg border overflow-hidden"
+                    style={{ zIndex: 1050, maxHeight: '240px', overflowY: 'auto' }}
+                  >
+                    {suggestions.map((item, idx) => (
+                      <div
+                        key={idx}
+                        className="p-2 px-3 border-bottom d-flex align-items-center justify-content-between hover-bg-light cursor-pointer"
+                        style={{ cursor: 'pointer' }}
+                        onMouseDown={() => {
+                          setSearch(item.query);
+                          setShowSuggestions(false);
+                        }}
+                      >
+                        <div className="d-flex align-items-center gap-2">
+                          {item.type === 'city' ? (
+                            <MapPin size={15} className="text-danger flex-shrink-0" />
+                          ) : item.type === 'hotel' ? (
+                            <Building size={15} className="text-primary flex-shrink-0" />
+                          ) : (
+                            <Sparkles size={15} className="text-warning flex-shrink-0" />
+                          )}
+                          <div>
+                            <div className="small fw-semibold">{item.title}</div>
+                            <div className="text-muted" style={{ fontSize: '0.7rem' }}>
+                              {item.subtitle}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Category */}
@@ -222,12 +342,14 @@ const RoomList = () => {
                 <p className="text-muted mt-2">Fetching room accommodations...</p>
               </div>
             ) : rooms.length === 0 ? (
-              <div className="card border-0 shadow-sm rounded-4 p-5 text-center">
+              <div className="card border-0 shadow-sm rounded-4 p-5 text-center bg-white">
                 <h5 className="fw-bold mb-2">No rooms matched your criteria</h5>
-                <p className="text-muted mb-3">Try adjusting your filters or search keywords.</p>
+                <p className="text-muted mb-3">
+                  We couldn't find any rooms matching "{search || 'your active filters'}".
+                </p>
                 <div>
                   <button onClick={handleResetFilters} className="btn btn-primary btn-sm rounded-pill px-4">
-                    Reset Filters
+                    Reset & View All Rooms
                   </button>
                 </div>
               </div>
@@ -235,7 +357,7 @@ const RoomList = () => {
               <div className="row g-4">
                 {rooms.map((room) => (
                   <div key={room._id} className="col-md-6">
-                    <div className="card h-100 border-0 shadow-sm rounded-4 overflow-hidden d-flex flex-column bg-white">
+                    <div className="card h-100 border-0 shadow-sm rounded-4 overflow-hidden d-flex flex-column bg-white hover-shadow transition-all">
                       <div className="position-relative" style={{ height: '220px' }}>
                         <img
                           src={room.images?.[0] || 'https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=800&q=80'}
@@ -243,7 +365,7 @@ const RoomList = () => {
                           className="w-100 h-100 object-fit-cover"
                         />
                         <span className="position-absolute top-0 start-0 m-3 badge bg-dark bg-opacity-75 text-white px-3 py-1 rounded-pill">
-                          Room #{room.roomNumber}
+                          {room.hotel?.address?.city ? `📍 ${room.hotel.address.city}` : `Room #${room.roomNumber}`}
                         </span>
 
                         <span
@@ -260,7 +382,7 @@ const RoomList = () => {
                       </div>
 
                       <div className="card-body p-4 d-flex flex-column">
-                        <div className="d-flex justify-content-between align-items-center mb-2">
+                        <div className="d-flex justify-content-between align-items-center mb-1">
                           <span className="badge bg-primary-subtle text-primary fw-semibold px-2 py-1">
                             {room.category?.name || 'Standard'}
                           </span>
@@ -272,6 +394,15 @@ const RoomList = () => {
                         </div>
 
                         <h5 className="card-title fw-bold text-dark mb-1">{room.title}</h5>
+
+                        {/* Hotel Name & Destination Badge */}
+                        <div className="text-muted small fw-medium mb-2 d-flex align-items-center gap-1">
+                          <MapPin size={14} className="text-danger flex-shrink-0" />
+                          <span>
+                            {room.hotel?.name || 'HotelPro'} &bull; {room.hotel?.address?.city || 'India'}
+                          </span>
+                        </div>
+
                         <p className="card-text text-muted small line-clamp-2 mb-3">
                           {room.description}
                         </p>
