@@ -183,25 +183,9 @@ HotelManagement/
 
 ---
 
-## 🚢 Pushing to GitHub (For Mentors & Submission)
+## 📄 Project Documentation
 
-When ready to submit your project to GitHub:
-1. Initialize git and commit:
-   ```bash
-   git init
-   git add .
-   git commit -m "feat: complete HotelPro hotel booking & management system"
-   ```
-2. Create a new repository on your GitHub account (named `HotelPro` or `HotelManagement`).
-3. Connect and push:
-   ```bash
-   git remote add origin https://github.com/<your-username>/HotelPro.git
-   git branch -M main
-   git push -u origin main
-   ```
-4. Copy the repository link and paste it into your Skill Wallet portal submission box!
+The complete HotelPro project documentation is available below.
 
----
+📑 [View HotelPro Project Documentation (PDF)](docs/HotelPro_Project_Documentation.pdf)
 
-## 📄 License
-This project is open-source under the [MIT License](LICENSE).
