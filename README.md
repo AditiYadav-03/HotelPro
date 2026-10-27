@@ -187,5 +187,5 @@ HotelManagement/
 
 The complete HotelPro project documentation is available below.
 
-📑 [View HotelPro Project Documentation (PDF)](docs/HotelPro_Project_Documentation.pdf)
+📑 [View HotelPro Project Documentation (PDF)](Project Documentation/HotelPro_Project_Documentation.pdf)
 
